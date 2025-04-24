@@ -95,26 +95,45 @@ class AzureBlobStorage(StorageBackend):
 
     def _get_signed_url(self, blob, expires_in):
         # type: (BlobClient, int) -> str
+        """Devuelve una URL firmada (SAS) con permisos de lectura.
+
+        Args:
+            blob: instancia de BlobClient cuyo SAS se generará
+            expires_in: tiempo de vida del SAS en segundos
+        """
+        # Permisos
         permissions = BlobSasPermissions(read=True)
-        # 1) Start 5 min ago → evita errores de reloj
+
+        # 1) Start 5 min atrás → evita errores de reloj
         start_time = datetime.now(timezone.utc) - timedelta(minutes=5)
 
-        # 2) Expiración guaranteed > start_time
-        token_expires = start_time + timedelta(seconds=expires_in)
+        # 2) Expiración garantizada > start_time
+        expiry_time = start_time + timedelta(seconds=expires_in)
 
-        sas_token = generate_blob_sas(account_name=blob.account_name,
-                                      account_key=blob.credential.account_key,
-                                      container_name=blob.container_name,
-                                      blob_name=blob.blob_name,
-                                      permission=permissions,
-                                      expiry=token_expires)
+        # 3) Credencial: usa account_key; si no viene en blob, usa la del service-client
+        account_key = (
+            getattr(blob.credential, "account_key", None)
+            or getattr(self._svc_client.credential, "account_key", None)
+        )
 
-        blob_client = BlobClient(self._svc_client.url,
-                                 container_name=blob.container_name,
-                                 blob_name=blob.blob_name,
-                                 credential=sas_token)
+        sas_token = generate_blob_sas(
+            account_name=blob.account_name,
+            account_key=account_key,
+            container_name=blob.container_name,
+            blob_name=blob.blob_name,
+            permission=permissions,
+            start=start_time,
+            expiry=expiry_time,
+        )
 
-        return blob_client.url  # type: ignore
+        # 4) Construir URL firmada
+        signed_blob = BlobClient(
+            self._svc_client.url,
+            container_name=blob.container_name,
+            blob_name=blob.blob_name,
+            credential=sas_token,
+        )
+        return signed_blob.url
 
     @memoized_property
     def _is_public_read(self):
