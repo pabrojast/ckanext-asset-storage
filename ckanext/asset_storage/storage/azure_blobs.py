@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from azure.core.exceptions import ResourceNotFoundError
@@ -96,7 +96,11 @@ class AzureBlobStorage(StorageBackend):
     def _get_signed_url(self, blob, expires_in):
         # type: (BlobClient, int) -> str
         permissions = BlobSasPermissions(read=True)
-        token_expires = (datetime.now(tz=UTC) + timedelta(seconds=expires_in))
+        # 1) Start 5 min ago → evita errores de reloj
+        start_time = datetime.now(timezone.utc) - timedelta(minutes=5)
+
+        # 2) Expiración guaranteed > start_time
+        token_expires = start_time + timedelta(seconds=expires_in)
 
         sas_token = generate_blob_sas(account_name=blob.account_name,
                                       account_key=blob.credential.account_key,
