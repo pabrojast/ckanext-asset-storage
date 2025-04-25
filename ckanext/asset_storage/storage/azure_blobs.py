@@ -96,12 +96,14 @@ class AzureBlobStorage(StorageBackend):
     def _get_signed_url(self, blob, expires_in):
         # type: (BlobClient, int) -> str
         permissions = BlobSasPermissions(read=True)
+        start_time = datetime.now(tz=UTC) - timedelta(minutes=5)
         token_expires = (datetime.now(tz=UTC) + timedelta(seconds=expires_in))
 
         sas_token = generate_blob_sas(account_name=blob.account_name,
                                       account_key=blob.credential.account_key,
                                       container_name=blob.container_name,
                                       blob_name=blob.blob_name,
+                                      start=start_time,
                                       permission=permissions,
                                       expiry=token_expires)
 
