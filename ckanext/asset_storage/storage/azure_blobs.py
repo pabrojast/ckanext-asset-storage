@@ -98,7 +98,8 @@ class AzureBlobStorage(StorageBackend):
         permissions = BlobSasPermissions(read=True)
         start_time = datetime.now(tz=UTC) - timedelta(minutes=5)
         token_expires = (datetime.now(tz=UTC) + timedelta(seconds=expires_in))
-
+        print(f"start_time: {start_time}")
+        print(f"token_expires: {token_expires}")
         sas_token = generate_blob_sas(account_name=blob.account_name,
                                       account_key=blob.credential.account_key,
                                       container_name=blob.container_name,
