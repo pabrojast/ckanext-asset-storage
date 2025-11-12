@@ -2,10 +2,18 @@
 from setuptools import setup, find_packages  # Always prefer setuptools over distutils
 from codecs import open  # To use a consistent encoding
 from os import path
-
-import ckanext.asset_storage
+import re
 
 here = path.abspath(path.dirname(__file__))
+
+# Extract version without importing the package (namespace/package conflicts).
+def read_version():
+    version_file = path.join(here, 'ckanext', 'asset_storage', '__init__.py')
+    with open(version_file, encoding='utf-8') as fh:
+        match = re.search(r"^__version__\s*=\s*['\"]([^'\"]+)['\"]", fh.read(), re.MULTILINE)
+        if not match:
+            raise RuntimeError("Cannot find version string.")
+        return match.group(1)
 
 # Get the long description from the relevant file
 with open(path.join(here, 'README.md'), encoding='utf-8') as f:
@@ -17,7 +25,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # http://packaging.python.org/en/latest/tutorial.html#version
-    version=ckanext.asset_storage.__version__,
+    version=read_version(),
 
     description='''Store CKAN asset files on a 3rd party storage service''',
     long_description=long_description,
